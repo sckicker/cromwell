@@ -12,9 +12,9 @@ BEGIN_XTP_NAMESPACE(Szseo)
 #define PRINT_STRING(name, str) \
     do { \
     char buf[1024]; \
-	snprintf(buf, 1024, "%s: [%s]", #name, str); \
+    snprintf(buf, 1024, "%s: [%s]", #name, str); \
     printf("%s\n", buf); \
-	} while(0)
+    } while(0)
 #endif
 
 // Only for char[n]
