@@ -11,6 +11,132 @@ static void set_error(char* err, const char* fmt, ...) {
 	va_end(ap);
 }
 
+int set_block(char *err, int fd, int non_block) {
+    int flags;
+
+    /* Set the socket blocking (if non_block is zero) or non-blocking.
+     * Note that fcntl(2) for F_GETFL and F_SETFL can't be
+     * interrupted by a signal. */
+    if ((flags = fcntl(fd, F_GETFL)) == -1) {
+        set_error(err, "fcntl(F_GETFL): %s", strerror(errno));
+        return -1;
+    }
+
+    if (non_block)
+        flags |= O_NONBLOCK;
+    else
+        flags &= ~O_NONBLOCK;
+
+    if (fcntl(fd, F_SETFL, flags) == -1) {
+        set_error(err, "fcntl(F_SETFL,O_NONBLOCK): %s", strerror(errno));
+        return -1;
+    }
+    return 0;
+}
+
+int nonblock(char *err, int fd) {
+    return set_block(err, fd, 1);
+}
+
+int block(char *err, int fd) {
+    return set_block(err, fd, 0);
+}
+
+/* Set TCP keep alive option to detect dead peers. The interval option
+ * is only used for Linux as we are using Linux-specific APIs to set
+ * the probe send time, interval, and count. */
+int keep_alive(char *err, int fd, int interval) {
+    int val = 1;
+
+    if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &val, sizeof(val)) == -1) {
+        set_error(err, "setsockopt SO_KEEPALIVE: %s", strerror(errno));
+        return -1;
+    }
+
+#ifdef __linux__
+    /* Default settings are more or less garbage, with the keepalive time
+     * set to 7200 by default on Linux. Modify settings to make the feature
+     * actually useful. */
+
+    /* Send first probe after interval. */
+    val = interval;
+    if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &val, sizeof(val)) < 0) {
+        set_error(err, "setsockopt TCP_KEEPIDLE: %s\n", strerror(errno));
+        return -1;
+    }
+
+    /* Send next probes after the specified interval. Note that we set the
+     * delay as interval / 3, as we send three probes before detecting
+     * an error (see the next setsockopt call). */
+    val = interval/3;
+    if (val == 0) val = 1;
+    if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, &val, sizeof(val)) < 0) {
+        set_error(err, "setsockopt TCP_KEEPINTVL: %s\n", strerror(errno));
+        return -1;
+    }
+
+    /* Consider the socket in error state after three we send three ACK
+     * probes without getting a reply. */
+    val = 3;
+    if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPCNT, &val, sizeof(val)) < 0) {
+        anetSetError(err, "setsockopt TCP_KEEPCNT: %s\n", strerror(errno));
+        return -1;
+    }
+#else
+    ((void) interval); /* Avoid unused var warning for non Linux systems. */
+#endif
+
+    return 0;
+}
+
+static int set_tcp_nodelay(char *err, int fd, int val) {
+    if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &val, sizeof(val)) == -1) {
+        set_error(err, "setsockopt TCP_NODELAY: %s", strerror(errno));
+        return -1;
+    }
+    return 0;
+}
+
+int enable_tcp_nodelay(char *err, int fd) {
+    return set_tcp_nodelay(err, fd, 1);
+}
+
+int disable_tcp_nodelay(char *err, int fd) {
+    return set_tcp_nodelay(err, fd, 0);
+}
+
+
+int set_send_buffer(char *err, int fd, int buffsize) {
+    if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &buffsize, sizeof(buffsize)) == -1) {
+        set_error(err, "setsockopt SO_SNDBUF: %s", strerror(errno));
+        return -1;
+    }
+    return 0;
+}
+
+int tcp_keep_alive(char *err, int fd) {
+    int yes = 1;
+    if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &yes, sizeof(yes)) == -1) {
+        set_error(err, "setsockopt SO_KEEPALIVE: %s", strerror(errno));
+        return -1;
+    }
+    return 0;
+}
+
+/* Set the socket send timeout (SO_SNDTIMEO socket option) to the specified
+ * number of milliseconds, or disable it if the 'ms' argument is zero. */
+int send_timeout(char *err, int fd, long long ms) {
+    struct timeval tv;
+
+    tv.tv_sec = ms/1000;
+    tv.tv_usec = (ms%1000)*1000;
+    if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) == -1) {
+        set_error(err, "setsockopt SO_SNDTIMEO: %s", strerror(errno));
+        return -1;
+    }
+    return 0;
+}
+
 static int set_reuse_addr(char *err, int fd) {
     int yes = 1;
     /* Make sure connection-intensive things like the redis benckmark
@@ -20,6 +146,46 @@ static int set_reuse_addr(char *err, int fd) {
         return -1;
     }
     return 0;
+}
+
+/* anetGenericResolve() is called by anetResolve() and anetResolveIP() to
+ * do the actual work. It resolves the hostname "host" and set the string
+ * representation of the IP address into the buffer pointed by "ipbuf".
+ *
+ * If flags is set to ANET_IP_ONLY the function only resolves hostnames
+ * that are actually already IPv4 or IPv6 addresses. This turns the function
+ * into a validating / normalizing function. */
+int gene_resolve(char *err, char *host, char *ipbuf, size_t ipbuf_len, int flags) {
+    struct addrinfo hints, *info;
+    int rv;
+
+    memset(&hints, 0, sizeof(hints));
+    if (flags & ANET_IP_ONLY) hints.ai_flags = AI_NUMERICHOST;
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;  /* specify socktype to avoid dups */
+
+    if ((rv = getaddrinfo(host, NULL, &hints, &info)) != 0) {
+        set_error(err, "%s", gai_strerror(rv));
+        return -1;
+    }
+    if (info->ai_family == AF_INET) {
+        struct sockaddr_in *sa = (struct sockaddr_in *)info->ai_addr;
+        inet_ntop(AF_INET, &(sa->sin_addr), ipbuf, ipbuf_len);
+    } else {
+        struct sockaddr_in6 *sa = (struct sockaddr_in6 *)info->ai_addr;
+        inet_ntop(AF_INET6, &(sa->sin6_addr), ipbuf, ipbuf_len);
+    }
+
+    freeaddrinfo(info);
+    return 0;
+}
+
+int resolve(char *err, char *host, char *ipbuf, size_t ipbuf_len) {
+    return gene_resolve(err, host, ipbuf, ipbuf_len, ANET_NONE);
+}
+
+int resolve_ip(char *err, char *host, char *ipbuf, size_t ipbuf_len) {
+    return gene_resolve(err, host, ipbuf, ipbuf_len, ANET_IP_ONLY);
 }
 
 static int create_socket(char *err, int domain) {
@@ -73,7 +239,7 @@ static int _tcp_server(char *err, int port, char *bindaddr, int af, int backlog)
             continue;
 
         if (af == AF_INET6 && anetV6Only(err, s) == -1) goto error;
-        if (anetSetReuseAddr(err, s) == ANET_ERR) goto error;
+        if (set_reuse_addr(err, s) == -1) goto error;
         if (listen(err, s, p->ai_addr, p->ai_addrlen, backlog) == -1) goto error;
         goto end;
     }
