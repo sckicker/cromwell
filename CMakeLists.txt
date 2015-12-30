@@ -1,6 +1,6 @@
-cmake_minimun_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.6)
 
-project(Frontainebleau)
+project(cromwell)
 
 enable_testing()
 
@@ -42,8 +42,6 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
 
 find_package(Boost REQUIRED)
-find_package(Protobuf)
-find_package(CURL)
 find_package(ZLIB)
 find_path(CARES_INCLUDE_DIR ares.h)
 find_library(CARES_LIBRARY NAMES cares)
@@ -63,12 +61,6 @@ find_library(THRIFT_LIBRARY NAMES thrift)
 
 if(CARES_INCLUDE_DIR AND CARES_LIBRARY)
     message(STATUS "found cares")
-endif()
-if(CURL_FOUND)
-    message(STATUS "found curl")
-endif()
-if(PROTOBUF_FOUND)
-    message(STATUS "found protobuf")
 endif()
 if(TCMALLOC_INCLUDE_DIR AND TCMALLOC_LIBRARY)
     message(STATUS "found tcmalloc")
@@ -92,7 +84,7 @@ include_directories(${PROJECT_SOURCE_DIR})
 string(TOUPPER ${CMAKE_BUILD_TYPE} BUILD_TYPE)
 message(STATUS "CXX_FLAGS = " ${CMAKE_CXX_FLAGS} " " ${CMAKE_CXX_FLAGS_${BUILD_TYPE}})
 
-add_subdirectory(cronwell)
+add_subdirectory(cromwell)
 
 if(NOT CMAKE_BUILD_NO_EXAMPLES)
     add_subdirectory(contrib)
