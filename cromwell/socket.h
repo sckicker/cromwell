@@ -27,8 +27,9 @@ public:
     void SetReusePort(bool on);
 
     void SetKeepAlive(bool on);
+
 private:
     int fd_;
 };
 
-}//namespace cromwell.
+}//end-namespace cromwell.

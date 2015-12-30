@@ -1,17 +1,21 @@
 #include "socket_opt.h"
 
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <arpa/inet.h>
+
 namespace cromwell {
 
 static void set_error(char* err, const char* fmt, ...) {
-	va_list ap;
-
 	if (!err) return;
+
+	va_list ap;
 	va_start(ap, fmt);
 	vsnprintf(err, 256, fmt, ap);
 	va_end(ap);
 }
 
-int set_block(char *err, int fd, int non_block) {
+static int set_block(char *err, int fd, int non_block) {
     int flags;
 
     /* Set the socket blocking (if non_block is zero) or non-blocking.
@@ -128,8 +132,8 @@ int tcp_keep_alive(char *err, int fd) {
 int send_timeout(char *err, int fd, long long ms) {
     struct timeval tv;
 
-    tv.tv_sec = ms/1000;
-    tv.tv_usec = (ms%1000)*1000;
+    tv.tv_sec = ms / 1000;
+    tv.tv_usec = (ms % 1000) * 1000;
     if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) == -1) {
         set_error(err, "setsockopt SO_SNDTIMEO: %s", strerror(errno));
         return -1;
@@ -155,7 +159,7 @@ static int set_reuse_addr(char *err, int fd) {
  * If flags is set to ANET_IP_ONLY the function only resolves hostnames
  * that are actually already IPv4 or IPv6 addresses. This turns the function
  * into a validating / normalizing function. */
-int gene_resolve(char *err, char *host, char *ipbuf, size_t ipbuf_len, int flags) {
+static int gene_resolve(char *err, char *host, char *ipbuf, size_t ipbuf_len, int flags) {
     struct addrinfo hints, *info;
     int rv;
 
@@ -188,6 +192,16 @@ int resolve_ip(char *err, char *host, char *ipbuf, size_t ipbuf_len) {
     return gene_resolve(err, host, ipbuf, ipbuf_len, ANET_IP_ONLY);
 }
 
+static int v6_only(char *err, int s) {
+    int yes = 1;
+    if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, &yes, sizeof(yes)) == -1) {
+        set_error(err, "setsockopt: %s", strerror(errno));
+        close(s);
+        return -1;
+    }
+    return 0;
+}
+
 static int create_socket(char *err, int domain) {
     int s;
     if ((s = socket(domain, SOCK_STREAM, 0)) == -1) {
@@ -202,6 +216,98 @@ static int create_socket(char *err, int domain) {
         return -1;
     }
     return s;
+}
+
+#define CONNECT_NONE 0
+#define CONNECT_NONBLOCK 1
+#define CONNECT_BE_BINDING 2 /* Best effort binding. */
+static int tcp_gene_connect(char *err, char *addr, int port, char *source_addr, int flags) {
+    int s = ANET_ERR, rv;
+    char portstr[6];  /* strlen("65535") + 1; */
+    struct addrinfo hints, *servinfo, *bservinfo, *p, *b;
+
+    snprintf(portstr, sizeof(portstr), "%d", port);
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+
+    if ((rv = getaddrinfo(addr,portstr,&hints,&servinfo)) != 0) {
+        set_error(err, "%s", gai_strerror(rv));
+        return -1;
+    }
+    for (p = servinfo; p != NULL; p = p->ai_next) {
+        /* Try to create the socket and to connect it.
+         * If we fail in the socket() call, or on connect(), we retry with
+         * the next entry in servinfo. */
+        if ((s = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
+            continue;
+        if (set_reuse_addr(err, s) == -1) goto error;
+        if (flags & CONNECT_NONBLOCK && nonblock(err,s) != 0)
+            goto error;
+        if (source_addr) {
+            int bound = 0;
+            /* Using getaddrinfo saves us from self-determining IPv4 vs IPv6 */
+            if ((rv = getaddrinfo(source_addr, NULL, &hints, &bservinfo)) != 0) {
+                set_error(err, "%s", gai_strerror(rv));
+                goto error;
+            }
+            for (b = bservinfo; b != NULL; b = b->ai_next) {
+                if (bind(s,b->ai_addr,b->ai_addrlen) != -1) {
+                    bound = 1;
+                    break;
+                }
+            }
+            freeaddrinfo(bservinfo);
+            if (!bound) {
+                set_error(err, "bind: %s", strerror(errno));
+                goto error;
+            }
+        }
+        if (connect(s, p->ai_addr, p->ai_addrlen) == -1) {
+            /* If the socket is non-blocking, it is ok for connect() to
+             * return an EINPROGRESS error here. */
+            if (errno == EINPROGRESS && flags & CONNECT_NONBLOCK)
+                goto end;
+            close(s);
+            s = -1;
+            continue;
+        }
+
+        /* If we ended an iteration of the for loop without errors, we
+         * have a connected socket. Let's return to the caller. */
+        goto end;
+    }
+    if (p == NULL)
+        anetSetError(err, "creating socket: %s", strerror(errno));
+
+error:
+    if (s != -1) {
+        close(s);
+        s = -1;
+    }
+
+end:
+    freeaddrinfo(servinfo);
+
+    /* Handle best effort binding: if a binding address was used, but it is
+     * not possible to create a socket, try again without a binding address. */
+    if (s == -1 && source_addr && (flags & CONNECT_BE_BINDING)) {
+        return tcp_gene_connect(err, addr, port, NULL, flags);
+    } else {
+        return s;
+    }
+}
+
+int tcp_connect(char *err, char *addr, int port) {
+    return tcp_gene_connect(err, addr, port, NULL, ANET_CONNECT_NONE);
+}
+
+int tcp_nonblock_connect(char *err, char *addr, int port) {
+    return tcp_gene_connect(err, addr, port, NULL, ANET_CONNECT_NONBLOCK);
+}
+
+int tcp_nonblock_bind_connect(char *err, char *addr, int port, char *source_addr) {
+    return tcp_gene_connect(err, addr, port, source_addr, ANET_CONNECT_NONBLOCK);
 }
 
 static int listen(char *err, int s, struct sockaddr *sa, socklen_t len, int backlog) {
@@ -234,11 +340,12 @@ static int _tcp_server(char *err, int port, char *bindaddr, int af, int backlog)
         set_error(err, "%s", gai_strerror(rv));
         return -1;
     }
+
     for (p = servinfo; p != NULL; p = p->ai_next) {
-        if ((s = socket(p->ai_family,p->ai_socktype,p->ai_protocol)) == -1)
+        if ((s = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
             continue;
 
-        if (af == AF_INET6 && anetV6Only(err, s) == -1) goto error;
+        if (af == AF_INET6 && v6_only(err, s) == -1) goto error;
         if (set_reuse_addr(err, s) == -1) goto error;
         if (listen(err, s, p->ai_addr, p->ai_addrlen, backlog) == -1) goto error;
         goto end;
@@ -292,6 +399,34 @@ int accept(char* err, int sock, char* ip, size_t ip_len, int* port) {
         if (port) *port = ntohs(s->sin6_port);
     }
     return fd;
+}
+
+/* Like read(2) but make sure 'count' is read before to return
+ * (unless error or EOF condition is encountered) */
+int s_read(int fd, char *buf, int count) {
+    ssize_t nread, totlen = 0;
+    while(totlen != count) {
+        nread = read(fd, buf, count-totlen);
+        if (nread == 0) return totlen;
+        if (nread == -1) return -1;
+        totlen += nread;
+        buf += nread;
+    }
+    return totlen;
+}
+
+/* Like write(2) but make sure 'count' is written before to return
+ * (unless error is encountered) */
+int s_write(int fd, char *buf, int count) {
+    ssize_t nwritten, totlen = 0;
+    while(totlen != count) {
+        nwritten = write(fd, buf, count-totlen);
+        if (nwritten == 0) return totlen;
+        if (nwritten == -1) return -1;
+        totlen += nwritten;
+        buf += nwritten;
+    }
+    return totlen;
 }
 
 }//end-cromwell
