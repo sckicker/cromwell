@@ -27,4 +27,6 @@ int accept(char* err, int serversock, char* ip, size_t ip_len, int* port);
 int s_read(int fd, char *buf, int count);
 int s_write(int fd, char *buf, int count);
 
+int get_peer_string(int fd, char *ip, size_t ip_len, int *port);
+
 }//end-cromwell.
