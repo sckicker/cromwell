@@ -63,7 +63,7 @@ BEGIN_XTP_NAMESPACE(Szseo)
 #ifndef MEGA_CHECK
 #define MEGA_CHECK(fg) \
 	do { \
-		if (!fg) return false; \
+		if (!fg) return -1; \
 	} while(0)
 #endif
 
