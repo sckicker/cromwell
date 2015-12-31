@@ -22,16 +22,16 @@ static int api_create(SeEventLoop* event_loop) {
         free(state);
         return -1;
     }
-    eventLoop->api_data = state;
+    event_loop->api_data = state;
     return 0;
-}
+}//end-api_create.
 
 static int api_resize(SeEventLoop* event_loop, int setsize) {
-    ApiState *state = event_loop->api_data;
+    ApiState* state = event_loop->api_data;
 
     state->events = realloc(state->events, sizeof(struct epoll_event) * setsize);
     return 0;
-}
+}//end-resize.
 
 static void api_free(SeEventLoop* event_loop) {
     ApiState* state = event_loop->api_data;
@@ -39,10 +39,10 @@ static void api_free(SeEventLoop* event_loop) {
     close(state->epfd);
     free(state->events);
     free(state);
-}
+}//end-api_free.
 
 static int api_add_event(SeEventLoop* event_loop, int fd, int mask) {
-    ApiState* state = eventLoop->api_data;
+    ApiState* state = event_loop->api_data;
     struct epoll_event ee;
     /* If the fd was already monitored for some event, we need a MOD
      * operation. Otherwise we need an ADD operation. */
@@ -104,6 +104,6 @@ static int api_poll(SeEventLoop* event_loop, struct timeval* tvp) {
 static const char* api_name(void) {
     static const char* name = "epoll";
     return name;
-}
+}//end-api_name.
 
 }//end-cromwell.

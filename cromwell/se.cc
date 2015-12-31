@@ -360,7 +360,7 @@ int SeProcessEvents(SeEventLoop *event_loop, int flags) {
                 fe->rfile_proc(event_loop, fd, fe->client, mask);
             }
             if (fe->mask & mask & SE_WRITABLE) {
-                if (!rfired || fe->wfileProc != fe->rfileProc)
+                if (!rfired || fe->wfile_proc != fe->rfile_proc)
                     fe->wfile_proc(event_loop, fd, fe->client, mask);
             }
             ++processed;
@@ -371,6 +371,45 @@ int SeProcessEvents(SeEventLoop *event_loop, int flags) {
         processed += ProcessTimeEvents(event_loop);
 
     return processed; /* return the number of processed file/time events */
+}//end-SeProcessEvents.
+
+/* Wait for milliseconds until the given file descriptor becomes
+ * writable/readable/exception */
+int SeWait(int fd, int mask, long long milliseconds) {
+    struct pollfd pfd;
+    int retmask = 0, retval;
+
+    memset(&pfd, 0, sizeof(pfd));
+    pfd.fd = fd;
+    if (mask & SE_READABLE) pfd.events |= POLLIN;
+    if (mask & SE_WRITABLE) pfd.events |= POLLOUT;
+
+    if ((retval = poll(&pfd, 1, milliseconds)) == 1) {
+        if (pfd.revents & POLLIN) retmask |= SE_READABLE;
+        if (pfd.revents & POLLOUT) retmask |= SE_WRITABLE;
+        if (pfd.revents & POLLERR) retmask |= SE_WRITABLE;
+        if (pfd.revents & POLLHUP) retmask |= SE_WRITABLE;
+        return retmask;
+    } else {
+        return retval;
+    }
+}//end-SeWait.
+
+void SeMain(SeEventLoop* event_loop) {
+    event_loop->stop = 0;
+    while (!event_loop->stop) {
+        if (event_loop->before_sleep != NULL)
+            event_loop->before_sleep(event_loop);
+        SeProcessEvents(event_loop, SE_ALL_EVENTS);
+    }//end-while.
+}//end-SeMain.
+
+const char* SeGetApiName(void) {
+    return api_name();
+}
+
+void SeSetBeforeSleepProc(SeEventLoop *event_loop, SeBeforeSleepProc* before_sleep) {
+    eventLoop->before_sleep = before_sleep;
 }
 
 }//end-cromwell.
