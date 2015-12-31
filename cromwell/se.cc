@@ -10,8 +10,6 @@
 #include <time.h>
 #include <errno.h>
 
-namespace cromwell {
-
 /* Include the best multiplexing layer supported by this system.
  * The following should be ordered by performances, descending. */
 #ifdef HAVE_EPOLL
@@ -19,6 +17,8 @@ namespace cromwell {
 #else
 	#include "se_select.cc"
 #endif
+
+namespace cromwell {
 
 SeEventLoop* SeCreateEventLoop(int setsize) {
     SeEventLoop* event_loop;

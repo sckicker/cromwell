@@ -1,13 +1,15 @@
-#pragma once
+#ifndef __SOCKET_H
+#define __SOCKET_H
 
 namespace cromwell {
 
 class Socket {
 public:
-    Socket();
+    Socket(int sock_type);
     virtual ~Socket();
 
 public:
+    bool Valid() const { return fd_ >= 0; }
     int fd() {return fd_;}
 
 public:
@@ -16,20 +18,16 @@ public:
     bool Connect(const char* ip, uint16_t port, const char* bind);
     bool Listen(const char* ip, uint16_t port);
 
-    bool Accept(char** addr);
+    int Accept();
 
-    void ShutdownWrite();
-
-    void SetTcpNoDelay(bool on);
-
-    void SetReuseAddr(bool on);
-
-    void SetReusePort(bool on);
-
-    void SetKeepAlive(bool on);
+    bool Send(const char* data, int data_len);
+    bool Recv(char* buf, int buf_len);
 
 private:
+    int sock_type_;
     int fd_;
 };
 
 }//end-namespace cromwell.
+
+#endif

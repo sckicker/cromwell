@@ -202,7 +202,7 @@ static int v6_only(char *err, int s) {
     return 0;
 }
 
-static int create_socket(char *err, int domain) {
+int create_socket(char *err, int domain) {
     int s;
     if ((s = socket(domain, SOCK_STREAM, 0)) == -1) {
         set_error(err, "creating socket: %s", strerror(errno));
@@ -310,7 +310,7 @@ int tcp_nonblock_bind_connect(char *err, char *addr, int port, char *source_addr
     return tcp_gene_connect(err, addr, port, source_addr, ANET_CONNECT_NONBLOCK);
 }
 
-static int listen(char *err, int s, struct sockaddr *sa, socklen_t len, int backlog) {
+int listen(char *err, int s, struct sockaddr *sa, socklen_t len, int backlog) {
     if (bind(s, sa, len) == -1) {
         set_error(err, "bind: %s", strerror(errno));
         close(s);
@@ -454,7 +454,7 @@ int get_peer_string(int fd, char *ip, size_t ip_len, int *port) {
 
 error:
     if (ip) {
-        if (ip_len >= 2) {
+    	if (ip_len >= 2) {
             ip[0] = '?';
             ip[1] = '\0';
         } else if (ip_len == 1) {
@@ -463,6 +463,17 @@ error:
     }
     if (port) *port = 0;
     return -1;
+}
+
+int socket_create_pair(char* err, int fd[2]) {
+	if (socketpair(AF_UNIX, SOCK_STREAM, 0, fd) < 0) {
+  	set_error(err, "socketpair: %s", strerror(errno));
+  }
+  return 0;
+}
+
+int socket_close(int fd) {
+  return (fd < 0 ? -1 : close(fd));
 }
 
 }//end-cromwell
