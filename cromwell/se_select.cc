@@ -2,15 +2,15 @@
 
 namespace cromwell {
 
-typedef struct SeApiState {
+typedef struct ApiState {
 	fd_set rfds, wfds;
     /* We need to have a copy of the fd sets as it's not safe to reuse
      * FD sets after select(). */
     fd_set _rfds, _wfds;
-} SeApiState;
+} ApiState;
 
-static int se_api_create(aeEventLoop *eventLoop) {
-    SeApiState *state = malloc(sizeof(SeApiState));
+static int api_create(SeEventLoop* event_loop) {
+    ApiState *state = malloc(sizeof(ApiState));
     if (!state) return -1;
 
     FD_ZERO(&state->rfds);
@@ -19,17 +19,17 @@ static int se_api_create(aeEventLoop *eventLoop) {
     return 0;
 }
 
-static int se_api_resize(aeEventLoop *eventLoop, int setsize) {
+static int api_resize(SeEventLoop* eventLoop, int setsize) {
     /* Just ensure we have enough room in the fd_set type. */
     if (setsize >= FD_SETSIZE) return -1;
     return 0;
 }
 
-static void se_api_free_data(SeEventLoop *event_loop) {
+static void api_free_data(SeEventLoop* event_loop) {
     free(event_loop->api_data);
 }
 
-static int se_api_add_event(SeEventLoop *event_loop, int fd, int mask) {
+static int api_add_event(SeEventLoop* event_loop, int fd, int mask) {
     SeApiState *state = event_loop->api_data;
 
     if (mask & SE_READABLE) FD_SET(fd, &state->rfds);
@@ -37,14 +37,14 @@ static int se_api_add_event(SeEventLoop *event_loop, int fd, int mask) {
     return 0;
 }
 
-static void se_api_del_event(SeEventLoop *event_loop, int fd, int mask) {
+static void api_del_event(SeEventLoop* event_loop, int fd, int mask) {
     SeApiState *state = event_loop->api_data;
 
     if (mask & SE_READABLE) FD_CLR(fd, &state->rfds);
     if (mask & SE_WRITABLE) FD_CLR(fd, &state->wfds);
 }
 
-static int se_api_poll(SeEventLoop *event_loop, struct timeval *tvp) {
+static int api_poll(SeEventLoop* event_loop, struct timeval* tvp) {
     SeApiState* state = event_loop->api_data;
 
     memcpy(&state->_rfds, &state->rfds, sizeof(fd_set));
@@ -71,7 +71,7 @@ static int se_api_poll(SeEventLoop *event_loop, struct timeval *tvp) {
     return numevents;
 }//end-api-poll.
 
-static const char* se_api_name(void) {
+static const char* api_name(void) {
     static const char* name = "select";
     return name;
 }
