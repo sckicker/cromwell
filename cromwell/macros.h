@@ -1,8 +1,25 @@
-#pragma once
+#ifndef __MACROS_H
+#define __MACROS_H
 
-#include "xtp_base.h"
+namespace cromwell {
 
-BEGIN_XTP_NAMESPACE(Szseo)
+#ifdef __APPLE__
+#include <AvailabilityMacros.h>
+#endif
+
+#ifdef __linux__
+#include <linux/version.h>
+#include <features.h>
+#endif
+
+/* Test for polling API */
+#ifdef __linux__
+#define HAVE_EPOLL 1
+#endif
+
+#if (defined(__APPLE__) && defined(MAC_OS_X_VERSION_10_6)) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined (__NetBSD__)
+#define HAVE_KQUEUE 1
+#endif
 
 #ifndef BlankChr
 #define BlankChr ' '
@@ -101,4 +118,6 @@ BEGIN_XTP_NAMESPACE(Szseo)
 #define LOG_FATAL(logFmt, ...) write_fatal_log(logFmt, __VA_ARGS__)
 #endif
 
-END_XTP_NAMESPACE(Szseo)
+}//end-cromwell.
+
+#endif
