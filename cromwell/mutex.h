@@ -1,41 +1,57 @@
-#pragma once
+#ifndef __MUTEX_H
+#define __MUTEX_H
 
-#include "xtp_base.h"
+#include <pthread.h>
 
-BEGIN_XTP_NAMESPACE(Szseo)
+namespace cromwell {
 
-class XTP_DLL_EXPORT MutexType {
+class NullMutex {
 public:
-	MutexType() {
-		os_mutex_init(&mutex_);
-	}
-
-	~MutexType() {
-		os_mutex_destroy(&mutex_);
-	}
-
-	inline void Acquire() {
-		os_mutex_lock(&mutex_);
+	inline bool Acquire() {
+		return true;
 	}
 
 	inline bool TryLock() {
-		return os_mutex_trylock(&mutex_);
+		return true;
 	}
 
-	inline void Release() {
-		os_mutex_unlock(&mutex_);
+	inline bool Release() {
+		return true;
+	}
+}
+
+class MutexType {
+public:
+	MutexType() {
+		pthread_mutex_init(&mutex_);
+	}
+
+	~MutexType() {
+		pthread_mutex_destroy(&mutex_);
+	}
+
+	inline bool Acquire() {
+		return 0 == pthread_mutex_lock(&mutex_);
+	}
+
+	inline bool TryLock() {
+		return 0 == pthread_mutex_trylock(&mutex_);
+	}
+
+	inline bool Release() {
+		return 0 == pthread_mutex_unlock(&mutex_);
 	}
 
 private:
 	MutexType(const MutexType & );
 	const MutexType& operator = (const MutexType &);
 
-	os_mutex_t mutex_;
+	pthread_mutex_t mutex_;
 };
 
 
 template<typename Mutex>
-class XTP_DLL_EXPORT ScopedMutex {
+class ScopedMutex {
 public:
 	ScopedMutex(MutexType& lock) : lock_(lock) {
 		lock_.Acquire();
@@ -49,4 +65,4 @@ private:
 	Mutex& lock_;
 };
 
-END_XTP_NAMESPACE(Szseo)
+}//end-cromwell
