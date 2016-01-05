@@ -18,7 +18,7 @@ public:
 	inline bool Release() {
 		return true;
 	}
-}
+};
 
 class MutexType {
 public:

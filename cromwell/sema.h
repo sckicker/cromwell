@@ -28,7 +28,7 @@ public:
 
     if (sec > 0) {
       struct timespec ts;
-      
+
     }
   }
 

@@ -22,6 +22,7 @@ inline uint64_t MsecTime() {
 }
 
 inline void GetTimeSpec(double sec, struct timespec *ts) {
+
   struct timeval tv;
   if (0 == gettimeofday(&tv, NULL)) {
     time_t t = (time_t)sec;
