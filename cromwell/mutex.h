@@ -7,7 +7,7 @@ namespace cromwell {
 
 class NullMutex {
 public:
-	inline bool Acquire() {
+	inline bool Lock() {
 		return true;
 	}
 
@@ -15,7 +15,7 @@ public:
 		return true;
 	}
 
-	inline bool Release() {
+	inline bool Unlock() {
 		return true;
 	}
 };
@@ -30,7 +30,7 @@ public:
 		pthread_mutex_destroy(&mutex_);
 	}
 
-	inline bool Acquire() {
+	inline bool Lock() {
 		return 0 == pthread_mutex_lock(&mutex_);
 	}
 
@@ -38,7 +38,7 @@ public:
 		return 0 == pthread_mutex_trylock(&mutex_);
 	}
 
-	inline bool Release() {
+	inline bool Unlock() {
 		return 0 == pthread_mutex_unlock(&mutex_);
 	}
 
@@ -54,11 +54,11 @@ template<typename Mutex>
 class ScopedMutex {
 public:
 	ScopedMutex(MutexType& lock) : lock_(lock) {
-		lock_.Acquire();
+		lock_.Lock();
 	}
 
 	~ScopedMutex() {
-		lock_.Release();
+		lock_.Unlock();
 	}
 
 private:

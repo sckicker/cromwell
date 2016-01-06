@@ -3,11 +3,17 @@
 #include <string>
 #include <stdio.h>
 
+#include "mutex.h"
+
 namespace cromwell {
 
-static std::string g_file_name;
-static FILE* g_file = stdout;
-static LogLevel g_log_level = LEVEL_DEBUG;
+namespace {
+  std::string g_file_name;
+  FILE* g_file = stdout;
+  LogLevel g_log_level = LEVEL_DEBUG;
+
+  MutexType mutex;
+}
 
 void set_log_level(LogLevel level) {
   g_log_level = level;
@@ -28,54 +34,72 @@ void write_trace_log(const char* msg_fmt, ...) {
   if (g_log_level >= LEVEL_TRACE && g_log_level < LEVEL_UNKNOWN) {
     va_list va;
     va_start(va, fmt);
-    fprintf(g_file, fmt, va);
+    {
+      ScopedMutex locker(mutex);
+      fprintf(g_file, fmt, va);
+    }
     va_end(va);
-  }
+  }//end-if
 }
 
 void write_debug_log(const char* msg_fmt, ...) {
   if (g_log_level >= LEVEL_DEBUG && g_log_level < LEVEL_UNKNOWN) {
     va_list va;
     va_start(va, fmt);
-    fprintf(g_file, fmt, va);
+    {
+      ScopedMutex locker(mutex);
+      fprintf(g_file, fmt, va);
+    }
     va_end(va);
-  }
+  }//end-if
 }
 
 void write_info_log(const char* msg_fmt, ...) {
   if (g_log_level >= LEVEL_INFO && g_log_level < LEVEL_UNKNOWN) {
     va_list va;
     va_start(va, fmt);
-    fprintf(g_file, fmt, va);
+    {
+      ScopedMutex locker(mutex);
+      fprintf(g_file, fmt, va);
+    }
     va_end(va);
-  }
+  }//end-if
 }
 
 void write_warning_log(const char* msg_fmt, ...) {
   if (g_log_level >= LEVEL_WARNING && g_log_level < LEVEL_UNKNOWN) {
     va_list va;
     va_start(va, fmt);
-    fprintf(g_file, fmt, va);
+    {
+      ScopedMutex locker(mutex);
+      fprintf(g_file, fmt, va);
+    }
     va_end(va);
-  }
+  }//end-if
 }
 
 void write_error_log(const char* msg_fmt, ...) {
   if (g_log_level >= ERROR && g_log_level < LEVEL_UNKNOWN) {
     va_list va;
     va_start(va, fmt);
-    fprintf(g_file, fmt, va);
+    {
+      ScopedMutex locker(mutex);
+      fprintf(g_file, fmt, va);
+    }
     va_end(va);
-  }
+  }//end-if
 }
 
 void write_fatal_log(const char* msg_fmt, ...) {
   if (g_log_level >= LEVEL_FATAL && g_log_level < LEVEL_UNKNOWN) {
     va_list va;
     va_start(va, fmt);
-    fprintf(g_file, fmt, va);
+    {
+      ScopedMutex locker(mutex);
+      fprintf(g_file, fmt, va);
+    }
     va_end(va);
-  }
+  }//end-if
 }
 
 }//end-cromwell
