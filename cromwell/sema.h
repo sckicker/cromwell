@@ -12,7 +12,7 @@ namespace cromwell {
 
 class SemaType {
 public:
-  SemaType(uint32_t count) {
+  explicit SemaType(uint32_t count) {
     if (0 != sem_init(&sema_, 0, count)) {
       throw std::runtime_error("sem_init fail");
     }

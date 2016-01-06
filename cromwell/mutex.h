@@ -1,5 +1,5 @@
-#ifndef __MUTEX_H
-#define __MUTEX_H
+#ifndef __CROMWELL_MUTEX_H
+#define __CROMWELL_MUTEX_H
 
 #include <pthread.h>
 
@@ -66,3 +66,5 @@ private:
 };
 
 }//end-cromwell
+
+#endif
