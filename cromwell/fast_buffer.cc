@@ -1,6 +1,6 @@
 #include "fast_buffer.h"
 
-BEGIN_XTP_NAMESPACE(Szseo)
+namespace cromwell {
 
 void FastBuffer::DestroyAll() {
 	if (pos_begin_) {
@@ -9,15 +9,16 @@ void FastBuffer::DestroyAll() {
 	}
 }
 
-size_t FastBuffer::FindBytes(const void *pattern, size_t len, int from) {
+size_t FastBuffer::FindBytes(const void* pattern, size_t len, int from) {
 	if (from < 0 || len <= 0) return -1;
 
 	const char *p = (const char *)pattern;
 	size_t dLen = pos_writing_ - pos_reading_ - len;
 
 	for (size_t i = from; i <= dLen; ++i) {
-		if (pos_reading_[i] == p[0] && \
-			memcmp(pos_reading_ + i, p, len) == 0) return i;
+		if (pos_reading_[i] == p[0] && memcmp(pos_reading_ + i, p, len) == 0) {
+			return i;
+		}
 	}
 	return -1;
 }
@@ -59,7 +60,7 @@ bool FastBuffer::EnsureSize(size_t need) {
 		pos_writing_ = pos_reading_ = pos_begin_;
 		pos_end_ = pos_begin_ + len;
 		return true;
-	}
+	}//end-if
 
 	// is the writing size big enough?
 	if (pos_end_ >= pos_writing_ + need) return true;
@@ -93,5 +94,4 @@ bool FastBuffer::EnsureSize(size_t need) {
 	return true;
 }
 
-
-END_XTP_NAMESPACE(Szseo)
+}//end-cromwell.

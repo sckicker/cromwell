@@ -1,13 +1,15 @@
-#pragma once
+#ifndef __CROMWELL_FASTBUFFER_H
+#define __CROMWELL_FASTBUFFER_H
 
-#include "xtp_base.h"
+namespace cromwell {
 
-BEGIN_XTP_NAMESPACE(Szseo)
-
-class XTP_DLL_EXPORT FastBuffer {
+class FastBuffer {
 public:
-	inline FastBuffer() : pos_begin_(NULL),
-		pos_end_(NULL), pos_reading_(NULL), pos_writing_(NULL) {
+	inline FastBuffer()
+	: pos_begin_(NULL),
+		pos_end_(NULL),
+		pos_reading_(NULL),
+		pos_writing_(NULL) {
 	}
 
 	inline ~FastBuffer() {
@@ -23,7 +25,7 @@ public:
 		return false;
 	}
 
-	inline char *GetReading() const {
+	inline char* GetReading() const {
 		return pos_reading_;
 	}
 
@@ -31,7 +33,7 @@ public:
 		return (pos_writing_ - pos_reading_);
 	}
 
-	inline char *GetWriting() const {
+	inline char* GetWriting() const {
 		return pos_writing_;
 	}
 
@@ -91,4 +93,6 @@ private:
 	char *pos_writing_;
 };
 
-END_XTP_NAMESPACE(Szseo)
+}//end-cromwell
+
+#endif
