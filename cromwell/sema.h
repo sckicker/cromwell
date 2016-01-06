@@ -13,8 +13,9 @@ namespace cromwell {
 class SemaType {
 public:
   SemaType(uint32_t count) {
-    int ret = sem_init(&sema_, 0, count);
-    if (ret != 0) throw std::runtime_error("sem_init fail");
+    if (0 != sem_init(&sema_, 0, count)) {
+      throw std::runtime_error("sem_init fail");
+    }
   }
 
   ~SemaType() {
@@ -24,12 +25,19 @@ public:
   bool Post() { return (0 == sem_post(&sema_)); }
 
   bool Wait(double sec) {
-    if (sec < 0) return (0 == sem_wait(&sema_));
-
+    if (sec < 0) {
+      return (0 == sem_wait(&sema_));
+    }
     if (sec > 0) {
       struct timespec ts;
+      GetTimeSpec(sec, &ts);
+      return (sem_timedwait(&sema_, &ts) == 0);
+    }//end-if
+    return (sem_trywait(&sema_) == 0);
+  }
 
-    }
+  bool TryWait() {
+    return sem_trywait(&sema_) == 0;
   }
 
 private:

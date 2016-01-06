@@ -1,8 +1,9 @@
-#ifndef __EVENT_LOOP_H
-#define __EVENT_LOOP_H
+#ifndef __CROMWELL_EVENT_LOOP_H
+#define __CROMWELL_EVENT_LOOP_H
 
-#include <>
 namespace cromwell {
 
 
 }//end-cromwell
+
+#endif
