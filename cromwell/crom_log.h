@@ -10,6 +10,7 @@ enum LogLevel {
   LEVEL_WARNING,
   LEVEL_ERROR,
   LEVEL_FATAL,
+  LEVEL_UNKNOWN,
 }
 
 void set_log_level(LogLevel level);
