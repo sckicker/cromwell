@@ -74,6 +74,7 @@ protected:
 private:
   FixedSizeMemPool(const FixedSizeMemPool &);
   FixedSizeMemPool& operator==(const FixedSizeMemPool &);
+
 private:
   GlobalHeader* mem_;
   AllocLock alloc_locker_;
@@ -125,9 +126,11 @@ public:
     if (obj) return new(obj) T(p);
     return nullptr;
   }
-  
+
 private:
   FixedSizeMemPool<AllocLock, FreeLock> mem_pool_;
 };
 
 }//end-cromwell.
+
+#endif
