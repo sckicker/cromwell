@@ -80,4 +80,54 @@ private:
   FreeLock free_locker_;
 };
 
+
+template <class T, class AlockLock=MutexType, class FreeLock=MutexType>
+class FixedSizeAllocator {
+public:
+  bool Initialze(uint32_t count) {
+    return mem_pool_.Initialze(sizeof(T), count);
+  }
+
+  inline uint32_t Capacity() const {
+    return mem_pool_.GetBlockCount();
+  }
+
+  inline uint32_t UsedCount() const {
+    return mem_pool_.GetUsedCount();
+  }
+
+  inline uint32_t GetKey(T* block) const {
+    return mem_pool_.GetKey(block);
+  }
+
+  inline T* GetBlock(uint64_t key) const {
+    return (T*)(mem_pool_.GetBlock(key));
+  }
+
+  inline bool Check(T* block) const {
+    return mem_pool_.GetKey(block) > 0;
+  }
+
+  inline bool Release(T* obj) {
+    obj->~T();
+    return mem_pool_.Free(obj);
+  }
+
+  inline T* Allocate() {
+    void* obj = mem_pool_.Alloc();
+    if (obj) return new(obj) T();
+    return nullptr;
+  }
+
+  template <class P>
+  inline T* Allocate(const P& p) {
+    void* obj = mem_pool_.Alloc();
+    if (obj) return new(obj) T(p);
+    return nullptr;
+  }
+  
+private:
+  FixedSizeMemPool<AllocLock, FreeLock> mem_pool_;
+};
+
 }//end-cromwell.
