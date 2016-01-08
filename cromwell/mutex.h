@@ -53,7 +53,7 @@ private:
 template<typename Mutex>
 class ScopedMutex {
 public:
-	ScopedMutex(MutexType& lock) : lock_(lock) {
+	ScopedMutex(Mutex& lock) : lock_(lock) {
 		lock_.Lock();
 	}
 

@@ -66,9 +66,9 @@ void* FixedSizeMemPool::Alloc() {
 
 bool FixedSizeMemPool::Free(void* block) {
   BlockHeader* bh = block_header(block);
-  if (check_id(hb) && header->magic != 0) {
-    uint32_t id = header->id;
-    header->key = 0;
+  if (check_id(bh) && bh->magic != 0) {
+    uint32_t id = bh->id;
+    bh->key = 0;
     {
       ScopedMutex<FreeLock> locker(free_locker_);
       uint32_t e = mem_->end;

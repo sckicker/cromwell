@@ -7,7 +7,7 @@
 
 namespace cromwell {
 
-template<class Type>
+template <typename T>
 class ThreadKey {
 public:
   inline ThreadKey(bool delete_key_when_destroy = true) {
@@ -22,20 +22,20 @@ public:
     pthread_key_delete(key_);
   }
 
-  inline void Set(Type* t) {
+  inline void Set(T* t) {
     pthread_setspecific(key_, t);
   }
 
-  inline Type* Get(void) {
+  inline T* Get(void) {
     void* p = pthread_getspecific(key_);
-    return static_cast<Type*>(p);
+    return static_cast<T*>(p);
   }
 
 private:
   static void destructor(void* p) {
     if (p) {
-      Type* t = static_cast<Type*>(p);
-      delete p;
+      T* t = static_cast<T*>(p);
+      delete t;
     }
   }
 
