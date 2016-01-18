@@ -3,7 +3,6 @@
 
 namespace cromwell {
 
-
 }//end-cromwell
 
 #endif
