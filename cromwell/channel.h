@@ -6,6 +6,8 @@
 
 namespace cromwell {
 
+class EventLoop;
+
 class Channel : std::noncopyable {
 public:
   typedef std::function<void(void)> EventCallback;
