@@ -9,7 +9,7 @@ Socket::Socket():
 }
 
 Socket::~Socket() {
-
+  socket_close(fd_);
 }
 
 bool Socket::Listen(const char* ip, uint16_t port) {

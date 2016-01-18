@@ -6,12 +6,14 @@
 
 namespace cromwell {
 
+static int kErrorMsgLen = 256;
+
 static void set_error(char* err, const char* fmt, ...) {
 	if (!err) return;
 
 	va_list ap;
 	va_start(ap, fmt);
-	vsnprintf(err, 256, fmt, ap);
+	vsnprintf(err, kErrorMsgLen, fmt, ap);
 	va_end(ap);
 }
 
@@ -231,7 +233,7 @@ static int tcp_gene_connect(char *err, char *addr, int port, char *source_addr, 
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
 
-    if ((rv = getaddrinfo(addr,portstr,&hints,&servinfo)) != 0) {
+    if ((rv = getaddrinfo(addr, portstr, &hints, &servinfo)) != 0) {
         set_error(err, "%s", gai_strerror(rv));
         return -1;
     }
@@ -310,7 +312,7 @@ int tcp_nonblock_bind_connect(char *err, char *addr, int port, char *source_addr
     return tcp_gene_connect(err, addr, port, source_addr, ANET_CONNECT_NONBLOCK);
 }
 
-int listen(char *err, int s, struct sockaddr *sa, socklen_t len, int backlog) {
+int listen(char* err, int s, struct sockaddr* sa, socklen_t len, int backlog) {
     if (bind(s, sa, len) == -1) {
         set_error(err, "bind: %s", strerror(errno));
         close(s);
