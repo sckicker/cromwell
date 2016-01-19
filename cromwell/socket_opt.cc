@@ -327,6 +327,25 @@ int listen(char* err, int s, struct sockaddr* sa, socklen_t len, int backlog) {
     return 0;
 }
 
+// listen func for model.
+int tcp_listen(char* err, const char* addr, int port) {
+	if (port < 0) return -1;
+	struct sockaddr_in sa;
+	int fd = tcp_create(err, AF_INET);
+	if (fd < 0) return -1;
+
+	bzero(&sa, sizeof(sa));
+	sa.sin_family = AF_INET;
+	sa.sin_port = htons(port);
+	sa.sin_addr.s_addr = htonl(INADDR_ANY);
+	if (addr && inet_aton(addr, &sa.sin_addr) == 0) {
+		set_error(err, "invalid bind address: %s", addr);
+		close(fd);
+		return -1;
+	}
+	return listen(err, fd, (struct sockaddr*)&sa, sizeof(sa), 511);
+}
+
 static int _tcp_server(char *err, int port, char *bindaddr, int af, int backlog) {
     int s, rv;
     char _port[6];  /* strlen("65535") */

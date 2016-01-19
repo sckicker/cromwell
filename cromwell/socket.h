@@ -10,7 +10,7 @@ public:
 
 public:
     bool Valid() const { return fd_ >= 0; }
-    int Socketfd() {return fd_;}
+    int SocketId() {return fd_;}
 
 public:
     void Close();
@@ -27,7 +27,7 @@ public:
     void SetReuseAddr(bool on);
     void SetReusePort(bool on);
     void SetKeepAlive(bool on);
-    
+
 private:
     int fd_;
 };

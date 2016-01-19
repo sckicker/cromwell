@@ -25,7 +25,7 @@ int resolve(char *err, char *host, char *ipbuf, size_t ipbuf_len);
 int resolve_ip(char *err, char *host, char *ipbuf, size_t ipbuf_len);
 
 int tcp_server(char *err, int port, char *bindaddr, int backlog);
-int listen(char *err, int s, struct sockaddr *sa, socklen_t len, int backlog);
+int tcp_listen(char *err, const char* addr, int port);
 int accept(char* err, int serversock, char* ip, size_t ip_len, int* port);
 
 int s_read(int fd, char *buf, int count);
